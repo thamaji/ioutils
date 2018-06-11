@@ -2,8 +2,8 @@ package ioutils
 
 import (
 	"io"
-	"os"
 	"io/ioutil"
+	"os"
 )
 
 // Terminate is drop all and close
@@ -13,6 +13,11 @@ func Terminate(r io.ReadCloser) error {
 		err = err1
 	}
 	return err
+}
+
+func Exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 func ReadDir(dir string) ([]os.FileInfo, error) {
@@ -30,6 +35,11 @@ func ReadDir(dir string) ([]os.FileInfo, error) {
 	return list, nil
 }
 
+func ForceReadDir(dir string) []os.FileInfo {
+	list, _ := ReadDir(dir)
+	return list
+}
+
 func ReadDirNames(dir string) ([]string, error) {
 	f, err := os.Open(dir)
 	if err != nil {
@@ -45,3 +55,7 @@ func ReadDirNames(dir string) ([]string, error) {
 	return list, nil
 }
 
+func ForceReadDirNames(dir string) []string {
+	list, _ := ReadDirNames(dir)
+	return list
+}
