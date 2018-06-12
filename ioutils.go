@@ -35,7 +35,7 @@ func ReadDir(dir string) ([]os.FileInfo, error) {
 	return list, nil
 }
 
-func ForceReadDir(dir string) []os.FileInfo {
+func ReadDirOrEmpty(dir string) []os.FileInfo {
 	list, _ := ReadDir(dir)
 	return list
 }
@@ -55,7 +55,7 @@ func ReadDirNames(dir string) ([]string, error) {
 	return list, nil
 }
 
-func ForceReadDirNames(dir string) []string {
+func ReadDirNamesOrEmpty(dir string) []string {
 	list, _ := ReadDirNames(dir)
 	return list
 }
