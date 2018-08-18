@@ -237,7 +237,7 @@ func Move(oldpath, newpath string) error {
 		return os.Remove(oldpath)
 	}
 
-	dst, err := os.OpenFile(newpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	dst, err := os.OpenFile(newpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fi.Mode().Perm())
 	if err != nil {
 		src.Close()
 		return err
@@ -254,4 +254,52 @@ func Move(oldpath, newpath string) error {
 	}
 
 	return os.Remove(oldpath)
+}
+
+func Copy(oldpath, newpath string) error {
+	src, err := os.OpenFile(oldpath, os.O_RDONLY, 0)
+	if err != nil {
+		return err
+	}
+
+	fi, err := src.Stat()
+	if err != nil {
+		src.Close()
+		return err
+	}
+
+	if fi.IsDir() {
+		if err := os.Mkdir(newpath, fi.Mode().Perm()); err != nil {
+			src.Close()
+			return err
+		}
+
+		fl, err := src.Readdir(-1)
+		src.Close()
+		if err != nil {
+			return err
+		}
+
+		for _, fi := range fl {
+			if err := Copy(filepath.Join(oldpath, fi.Name()), filepath.Join(newpath, fi.Name())); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	dst, err := os.OpenFile(newpath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fi.Mode().Perm())
+	if err != nil {
+		src.Close()
+		return err
+	}
+
+	_, err = io.Copy(dst, src)
+	src.Close()
+	if err != nil {
+		return err
+	}
+
+	return dst.Close()
 }
