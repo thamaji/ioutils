@@ -1,9 +1,12 @@
 package ioutils
 
 import (
+	"bufio"
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 // Terminate is drop all and close
@@ -12,6 +15,54 @@ func Terminate(r io.ReadCloser) error {
 	if err1 := r.Close(); err == nil {
 		err = err1
 	}
+	return err
+}
+
+func CreateFile(path string) (*os.File, error) {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err == nil {
+		return f, nil
+	}
+
+	if !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	dir := filepath.Dir(path)
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
+	}
+
+	return os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+}
+
+func WriteFile(path string, fn func(io.Writer) error) error {
+	f, err := CreateFile(path)
+	if err != nil {
+		return err
+	}
+
+	err = fn(f)
+	if err1 := f.Close(); err == nil {
+		err = err1
+	}
+
+	return err
+}
+
+func ReadFile(path string, fn func(io.Reader) error) error {
+	f, err := os.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return err
+	}
+
+	err = fn(f)
+	f.Close()
+
 	return err
 }
 
@@ -58,4 +109,93 @@ func ReadDirNames(dir string) ([]string, error) {
 func ReadDirNamesOrEmpty(dir string) []string {
 	list, _ := ReadDirNames(dir)
 	return list
+}
+
+func EachRegularFiles(dir string, fn func(os.FileInfo) error) error {
+	f, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	for {
+		fl, err := f.Readdir(1)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		if !fl[0].Mode().IsRegular() {
+			continue
+		}
+
+		if strings.HasPrefix(fl[0].Name(), ".") {
+			continue
+		}
+
+		if err := fn(fl[0]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func EachFiles(dir string, fn func(os.FileInfo) error) error {
+	f, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	for {
+		fl, err := f.Readdir(1)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		if err := fn(fl[0]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func EachLine(rd io.Reader, fn func([]byte) error) error {
+	return EachLineSize(rd, 4096, fn)
+}
+
+func EachLineSize(rd io.Reader, size int, fn func([]byte) error) error {
+	buf := make([]byte, 0, size)
+	b := bufio.NewReaderSize(rd, cap(buf))
+	for {
+		line, isPrefix, err := b.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return err
+		}
+
+		buf = append(buf, line...)
+
+		if isPrefix {
+			continue
+		}
+
+		if err := fn(buf); err != nil {
+			return err
+		}
+
+		buf = buf[:]
+	}
+
+	return nil
 }
