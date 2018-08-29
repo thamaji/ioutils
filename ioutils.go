@@ -194,7 +194,7 @@ func EachLineSize(rd io.Reader, size int, fn func([]byte) error) error {
 			return err
 		}
 
-		buf = buf[:]
+		buf = buf[:0]
 	}
 
 	return nil
