@@ -167,11 +167,11 @@ func EachFiles(dir string, fn func(os.FileInfo) error) error {
 	return nil
 }
 
-func EachLine(rd io.Reader, fn func([]byte) error) error {
-	return EachLineSize(rd, 4096, fn)
+func EachLines(rd io.Reader, fn func([]byte) error) error {
+	return EachLinesSize(rd, 4096, fn)
 }
 
-func EachLineSize(rd io.Reader, size int, fn func([]byte) error) error {
+func EachLinesSize(rd io.Reader, size int, fn func([]byte) error) error {
 	buf := make([]byte, 0, size)
 	b := bufio.NewReaderSize(rd, cap(buf))
 	for {
